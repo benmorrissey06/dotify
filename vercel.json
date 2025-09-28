@@ -6,8 +6,5 @@
     "api/test.js": {
       "maxDuration": 10
     }
-  },
-  "env": {
-    "GEMINI_API_KEY": "@gemini_api_key"
   }
 }
