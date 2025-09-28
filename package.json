@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "serve": "python simple_server.py"
   },
   "keywords": [
     "braille",
@@ -18,14 +19,14 @@
   "author": "Dotify",
   "license": "MIT",
   "dependencies": {
+    "@google/generative-ai": "^0.2.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "@radix-ui/react-toast": "^1.1.5",
     "@radix-ui/react-switch": "^1.0.3",
     "@radix-ui/react-progress": "^1.0.3",
     "lucide-react": "^0.294.0",
-    "clsx": "^2.0.0",
-    "@google/generative-ai": "^0.3.0"
+    "clsx": "^2.0.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.43",

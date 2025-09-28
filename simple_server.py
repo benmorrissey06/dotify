@@ -1,143 +1,79 @@
 #!/usr/bin/env python3
 """
-Gemini AI Server for Braille Printer
-Handles image analysis and text processing for accessibility
+Simple Python server for Gemini AI API
+No dependencies required - uses only built-in Python modules
 """
 
-import os
-import json
-import base64
 import http.server
 import socketserver
-from urllib.parse import urlparse, parse_qs
-import sys
+import json
+import urllib.request
+import urllib.parse
+import base64
+import os
+from urllib.error import HTTPError
 
-# Try to import google.generativeai, handle gracefully if not available
-try:
-    import google.generativeai as genai
-    from google.generativeai.types import HarmCategory, HarmBlockThreshold
-    GEMINI_AVAILABLE = True
-except ImportError:
-    print("⚠️  google-generativeai not installed. Run: pip install google-generativeai")
-    GEMINI_AVAILABLE = False
-
-# Configuration
-PORT = int(os.environ.get('PORT', 8000))
-API_KEY = os.environ.get('GEMINI_API_KEY', 'your-api-key-here')
-
-# Configure Gemini AI
-if GEMINI_AVAILABLE and API_KEY and API_KEY != 'your-api-key-here':
-    try:
-        genai.configure(api_key=API_KEY)
-        print(f"🔑 Gemini API Key: Set")
-    except Exception as e:
-        print(f"❌ Error configuring Gemini: {e}")
-        GEMINI_AVAILABLE = False
-else:
-    if not GEMINI_AVAILABLE:
-        print(f"🔑 Gemini API: Library not available")
-    else:
-        print(f"🔑 Gemini API Key: Using default (set GEMINI_API_KEY env var)")
-
-class GeminiHandler(http.server.BaseHTTPRequestHandler):
+class GeminiHandler(http.server.SimpleHTTPRequestHandler):
     def do_OPTIONS(self):
-        """Handle CORS preflight requests"""
         self.send_response(200)
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-        self.send_header('Access-Control-Max-Age', '86400')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()
-
-    def do_GET(self):
-        """Handle GET requests"""
-        parsed_path = urlparse(self.path)
-        
-        if parsed_path.path == '/api/test':
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            
-            response = {
-                "status": "success",
-                "message": "Gemini AI Server is running",
-                "api_key_configured": API_KEY and API_KEY != 'your-api-key-here',
-                "gemini_available": GEMINI_AVAILABLE,
-                "python_version": sys.version,
-                "timestamp": self.date_time_string()
-            }
-            self.wfile.write(json.dumps(response).encode())
-            
-        elif parsed_path.path == '/health':
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            
-            response = {
-                "status": "healthy", 
-                "service": "gemini-ai-server",
-                "gemini_available": GEMINI_AVAILABLE
-            }
-            self.wfile.write(json.dumps(response).encode())
-            
-        else:
-            self.send_response(404)
-            self.send_header('Content-type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            
-            response = {"error": "Endpoint not found", "path": self.path}
-            self.wfile.write(json.dumps(response).encode())
-
+    
     def do_POST(self):
-        """Handle POST requests for image analysis"""
         if self.path == '/api/analyze':
             self.handle_analyze()
         else:
-            self.send_response(404)
-            self.send_header('Content-type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            
-            response = {"error": "Endpoint not found", "path": self.path}
-            self.wfile.write(json.dumps(response).encode())
-
+            self.send_error(404, "Not Found")
+    
+    def do_GET(self):
+        if self.path == '/api/test':
+            self.handle_test()
+        elif self.path == '/api/analyze':
+            self.handle_analyze_info()
+        elif self.path == '/':
+            self.path = '/standalone.html'
+            super().do_GET()
+        else:
+            super().do_GET()
+    
+    def handle_test(self):
+        response = {
+            "message": "API is working!",
+            "method": "GET",
+            "timestamp": self.date_time_string(),
+            "server": "Python SimpleHTTPServer"
+        }
+        self.send_json_response(response)
+    
+    def handle_analyze_info(self):
+        response = {
+            "message": "Gemini AI Analyze endpoint is working!",
+            "method": "GET",
+            "note": "Use POST method with image data for analysis",
+            "example": {
+                "method": "POST",
+                "headers": {"Content-Type": "application/json"},
+                "body": {"image": "base64_image_data"}
+            },
+            "timestamp": self.date_time_string()
+        }
+        self.send_json_response(response)
+    
     def handle_analyze(self):
-        """Handle image analysis requests"""
         try:
-            # Set CORS headers
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-            self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+            # Get API key from environment variable
+            api_key = os.environ.get('GEMINI_API_KEY')
             
-            # Check if Gemini is available
-            if not GEMINI_AVAILABLE:
-                self.send_response(500)
-                self.send_header('Content-type', 'application/json')
-                self.end_headers()
-                
-                response = {
-                    "error": "Gemini library not available",
-                    "message": "Please install google-generativeai: pip install google-generativeai"
-                }
-                self.wfile.write(json.dumps(response).encode())
-                return
-
-            # Check API key
-            if not API_KEY or API_KEY == 'your-api-key-here':
-                self.send_response(500)
-                self.send_header('Content-type', 'application/json')
-                self.end_headers()
-                
-                response = {
+            if not api_key:
+                error_response = {
                     "error": "GEMINI_API_KEY environment variable not set",
-                    "message": "Please set the GEMINI_API_KEY environment variable"
+                    "message": "Please set your Gemini API key as an environment variable"
                 }
-                self.wfile.write(json.dumps(response).encode())
+                self.send_error(500, json.dumps(error_response))
                 return
-
+            
             # Read request body
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
@@ -145,120 +81,121 @@ class GeminiHandler(http.server.BaseHTTPRequestHandler):
             try:
                 data = json.loads(post_data.decode('utf-8'))
             except json.JSONDecodeError:
-                self.send_response(400)
-                self.send_header('Content-type', 'application/json')
-                self.end_headers()
-                
-                response = {"error": "Invalid JSON in request body"}
-                self.wfile.write(json.dumps(response).encode())
+                self.send_error(400, "Invalid JSON")
                 return
-
-            # Extract image data
+            
             image_data = data.get('image')
             if not image_data:
-                self.send_response(400)
-                self.send_header('Content-type', 'application/json')
-                self.end_headers()
-                
-                response = {"error": "No image data provided"}
-                self.wfile.write(json.dumps(response).encode())
+                self.send_error(400, "No image provided")
                 return
-
-            # Remove data URL prefix if present
-            if image_data.startswith('data:image'):
-                image_data = image_data.split(',')[1]
-
-            # Analyze image with Gemini
-            analysis = self.analyze_image_with_gemini(image_data)
             
-            # Send response
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            
-            response = {
-                "success": True,
-                "analysis": analysis,
-                "timestamp": self.date_time_string(),
-                "model": "gemini-1.5-flash"
-            }
-            self.wfile.write(json.dumps(response).encode())
-
-        except Exception as e:
-            print(f"Error in analyze endpoint: {e}")
-            self.send_response(500)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
-            
-            response = {
-                "error": "Internal server error",
-                "message": str(e)
-            }
-            self.wfile.write(json.dumps(response).encode())
-
-    def analyze_image_with_gemini(self, image_data):
-        """Analyze image using Gemini AI"""
-        try:
-            # Initialize Gemini model
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            
-            # Prepare image for Gemini
-            image_bytes = base64.b64decode(image_data)
-            
-            # Create prompt for accessibility-focused analysis
-            prompt = """
-            Analyze this image and provide a detailed description suitable for a Braille printer. 
-            Focus on:
-            1. Text content (if any) - transcribe exactly
-            2. Objects and their positions
-            3. Colors and visual elements
-            4. Overall scene composition
-            5. Any important details for accessibility
-            
-            Keep the description concise but comprehensive, as it will be converted to Braille.
-            """
-            
-            # Generate content
-            response = model.generate_content(
-                [prompt, {"mime_type": "image/jpeg", "data": image_bytes}],
-                safety_settings={
-                    HarmCategory.HARM_CATEGORY_HATE_SPEECH: HarmBlockThreshold.BLOCK_NONE,
-                    HarmCategory.HARM_CATEGORY_HARASSMENT: HarmBlockThreshold.BLOCK_NONE,
-                    HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT: HarmBlockThreshold.BLOCK_NONE,
-                    HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT: HarmBlockThreshold.BLOCK_NONE,
-                }
-            )
-            
-            return response.text
+            # Call Gemini API
+            result = self.call_gemini_api(api_key, image_data)
+            self.send_json_response(result)
             
         except Exception as e:
-            print(f"Error analyzing image with Gemini: {e}")
-            return f"Error analyzing image: {str(e)}"
-
-    def log_message(self, format, *args):
-        """Override to reduce log noise"""
-        pass
-
-def run_server(port):
-    """Start the server"""
-    try:
-        print(f"🚀 Starting Python server on http://localhost:{port}")
-        print(f"📱 Open http://localhost:{port} in your browser")
-        print(f"🐍 Python version: {sys.version}")
-        print(f"📦 Gemini available: {GEMINI_AVAILABLE}")
-        print("Press Ctrl+C to stop the server")
+            error_response = {
+                "error": "Failed to analyze image",
+                "details": str(e)
+            }
+            self.send_error(500, json.dumps(error_response))
+    
+    def call_gemini_api(self, api_key, image_data):
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
         
-        with socketserver.TCPServer(("", port), GeminiHandler) as httpd:
+        request_body = {
+            "contents": [{
+                "parts": [{
+                    "text": """ANALYSIS PROCESS:
+1. Identify the main object/subject visually
+2. Extract and read any visible text (labels, signs, writing, numbers)
+3. Combine visual characteristics with key text information
+4. Prioritize the most useful identifying details
+
+PRIORITY FEATURES (include when visible):
+- Text content (brand names, labels, numbers, words)
+- Visual characteristics (size, color, shape, condition)
+- Safety indicators (warnings, prescriptions, hazards)
+- Functional details (buttons, switches, controls)
+- Spatial markers (room numbers, addresses, directions)
+
+FORMAT REQUIREMENTS:
+- Maximum 4 words total
+- Last word MUST be the main object/subject
+- Include most distinguishing characteristic first
+- Use specific descriptors over generic ones
+
+EXAMPLES:
+- Milk carton with "2%" text + large size → "Large 2% milk carton"
+- Medicine bottle with "Advil" text + white color → "White Advil medication bottle"
+- Door with "Room 237" sign → "Room 237 door sign"
+- Control panel with "Power" button → "Red power button panel"
+- Document with "Invoice" header → "Unpaid invoice document paper"
+- Traffic sign with "Stop" text → "Red stop traffic sign"
+
+SPATIAL CONTEXT (when multiple items visible):
+- Include position: "Left", "Right", "Top", "Bottom"
+- Example: "Blue Pepsi can left" (when next to other cans)
+
+Return only the 4-word description, nothing else."""
+                }, {
+                    "inlineData": {
+                        "data": image_data,
+                        "mimeType": "image/jpeg"
+                    }
+                }]
+            }]
+        }
+        
+        data = json.dumps(request_body).encode('utf-8')
+        
+        req = urllib.request.Request(url, data=data)
+        req.add_header('Content-Type', 'application/json')
+        
+        try:
+            with urllib.request.urlopen(req) as response:
+                result = json.loads(response.read().decode('utf-8'))
+                
+                if 'candidates' in result and result['candidates'] and 'content' in result['candidates'][0]:
+                    analysis = result['candidates'][0]['content']['parts'][0]['text']
+                    return {
+                        "success": True,
+                        "analysis": analysis.strip(),
+                        "timestamp": self.date_time_string(),
+                        "model": "gemini-2.5-flash"
+                    }
+                else:
+                    return {
+                        "error": "Unexpected response format",
+                        "details": result
+                    }
+        except HTTPError as e:
+            error_body = e.read().decode('utf-8')
+            return {
+                "error": f"Gemini API error: {e.code}",
+                "details": error_body
+            }
+    
+    def send_json_response(self, data):
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+        self.wfile.write(json.dumps(data, indent=2).encode('utf-8'))
+
+def run_server(port=8000):
+    print(f"🚀 Starting Python server on http://localhost:{port}")
+    print(f"🔑 Gemini API Key: {'Set' if os.environ.get('GEMINI_API_KEY') else 'Not set'}")
+    print(f"📱 Open http://localhost:{port} in your browser")
+    print("Press Ctrl+C to stop the server")
+    
+    with socketserver.TCPServer(("", port), GeminiHandler) as httpd:
+        try:
             httpd.serve_forever()
-    except OSError as e:
-        if e.errno == 48:  # Address already in use
-            print(f"❌ Port {port} is already in use. Try a different port.")
-        else:
-            print(f"❌ Error starting server: {e}")
-    except KeyboardInterrupt:
-        print("\n🛑 Server stopped by user")
-    except Exception as e:
-        print(f"❌ Unexpected error: {e}")
+        except KeyboardInterrupt:
+            print("\n👋 Server stopped")
 
 if __name__ == "__main__":
-    run_server(PORT)
+    import sys
+    port = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
+    run_server(port)

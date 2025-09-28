@@ -67,17 +67,18 @@ app.get('/api/analyze', (req, res) => {
 app.post('/api/analyze', async (req, res) => {
     try {
         // Get API key from environment variable
-        const apiKey = process.env.GEMINI_API_KEY || 'AIzaSyDflfGxaL6rSYy_cYccLL4NqAf4ymEUU98';
+        const apiKey = process.env.GEMINI_API_KEY;
         
         if (!apiKey) {
             return res.status(500).json({ 
-                error: 'GEMINI_API_KEY environment variable not set' 
+                error: 'GEMINI_API_KEY environment variable not set',
+                message: 'Please set your Gemini API key as an environment variable'
             });
         }
 
         // Initialize Gemini AI
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         // Get image from request body
         const { image } = req.body;
@@ -93,8 +94,16 @@ app.post('/api/analyze', async (req, res) => {
             }
         };
 
-        // Create prompt for image analysis
-        const prompt = "Analyze this image and provide a detailed description of what you see. Include any text, objects, people, colors, and overall scene composition.";
+        // Create prompt for Braille label analysis
+        const prompt = `Analyze this image and create a 4-word Braille label description. Focus on:
+1. Main object/subject (last word)
+2. Key identifying features (brand, color, size, text)
+3. Safety or functional details
+4. Keep it concise and descriptive
+
+Examples: "Large 2% milk carton", "White Advil medication bottle", "Room 237 door sign"
+
+Return only the 4-word description.`;
 
         // Generate content using Gemini
         const result = await model.generateContent([prompt, imageData]);
@@ -104,9 +113,9 @@ app.post('/api/analyze', async (req, res) => {
         // Return the analysis
         res.status(200).json({
             success: true,
-            analysis: analysis,
+            analysis: analysis.trim(),
             timestamp: new Date().toISOString(),
-            model: "gemini-2.5-flash"
+            model: "gemini-1.5-flash"
         });
 
     } catch (error) {

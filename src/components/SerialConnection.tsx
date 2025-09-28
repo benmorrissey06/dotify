@@ -8,6 +8,20 @@ interface SerialConnectionProps {
 
 export function SerialConnection({ isConnected, onConnectionChange }: SerialConnectionProps) {
   const [isConnecting, setIsConnecting] = useState(false)
+  const [availablePorts, setAvailablePorts] = useState<string[]>([])
+
+  const listAvailablePorts = useCallback(async () => {
+    try {
+      if (!('serial' in navigator)) return
+      
+      const ports = await (navigator as any).serial.getPorts()
+      const portInfo = ports.map((port: any) => `${port.getInfo().usbVendorId || 'Unknown'}:${port.getInfo().usbProductId || 'Unknown'}`)
+      setAvailablePorts(portInfo)
+      console.log('Available ports:', portInfo)
+    } catch (error) {
+      console.error('Failed to list ports:', error)
+    }
+  }, [])
 
   const connectToPrinter = useCallback(async () => {
     if (isConnected) return
@@ -20,20 +34,55 @@ export function SerialConnection({ isConnected, onConnectionChange }: SerialConn
         throw new Error('Web Serial API is not supported in this browser. Please use Chrome or Edge.')
       }
 
-      // Request port access
-      const port = await (navigator as any).serial.requestPort()
+      // Check if we're on HTTPS or localhost
+      if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+        throw new Error('Web Serial API requires HTTPS or localhost. Please use https:// or localhost.')
+      }
+
+      // Request port access with filters
+      const port = await (navigator as any).serial.requestPort({
+        filters: [
+          { usbVendorId: 0x2341 }, // Arduino
+          { usbVendorId: 0x1A86 }, // CH340 (common USB-serial chip)
+          { usbVendorId: 0x0403 }, // FTDI
+          { usbVendorId: 0x10C4 }, // Silicon Labs
+        ]
+      })
       
-      // Open the port
-      await port.open({ baudRate: 9600 })
+      // Open the port with more options
+      await port.open({ 
+        baudRate: 9600,
+        dataBits: 8,
+        stopBits: 1,
+        parity: 'none',
+        flowControl: 'none'
+      })
       
       onConnectionChange(true)
       
       // Store port for later use
       ;(window as any).serialPort = port
       
+      console.log('Successfully connected to printer:', port)
+      
     } catch (error) {
       console.error('Serial connection failed:', error)
-      alert(`Failed to connect to printer: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      
+      let errorMessage = 'Unknown error'
+      if (error instanceof Error) {
+        errorMessage = error.message
+      }
+      
+      // Provide more specific error messages
+      if (errorMessage.includes('No port selected')) {
+        errorMessage = 'No printer port selected. Please try again and select a port from the list.'
+      } else if (errorMessage.includes('Failed to open serial port')) {
+        errorMessage = 'Failed to open serial port. Make sure:\n• The printer is connected via USB\n• The printer is powered on\n• No other application is using the port\n• Try a different USB port'
+      } else if (errorMessage.includes('Access denied')) {
+        errorMessage = 'Access denied. Make sure you select the correct port from the list.'
+      }
+      
+      alert(`Failed to connect to printer: ${errorMessage}`)
     } finally {
       setIsConnecting(false)
     }
@@ -100,12 +149,6 @@ export function SerialConnection({ isConnected, onConnectionChange }: SerialConn
           </div>
         </div>
 
-        {/* Connection Info */}
-        <div className="text-xs text-gray-400 space-y-1">
-          <p>• Connect your Arduino Braille printer via USB</p>
-          <p>• Make sure the printer is powered on and ready</p>
-          <p>• Web Serial API requires Chrome or Edge browser</p>
-        </div>
       </div>
     </div>
   )

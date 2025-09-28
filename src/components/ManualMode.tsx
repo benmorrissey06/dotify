@@ -37,12 +37,12 @@ export function ManualMode({ text, onTextChange, onProcess, isProcessing }: Manu
           {isProcessing ? (
             <>
               <Loader2 className="h-5 w-5 animate-spin" />
-              <span className="font-medium">Processing...</span>
+              <span className="font-medium">Preparing...</span>
             </>
           ) : (
             <>
               <Type className="h-5 w-5" />
-              <span className="font-medium">Process Text</span>
+              <span className="font-medium">Convert to Braille</span>
             </>
           )}
         </button>

@@ -113,7 +113,7 @@ function App() {
 
       toast({
         title: "Text Ready",
-        description: "Text is ready to be sent to Braille printer.",
+        description: "Text converted to Braille format and ready for printing.",
       })
     } catch (error) {
       setProcessing({
@@ -261,6 +261,7 @@ function App() {
           <ProcessingSection
             processing={processing}
             onSendToPrinter={sendToPrinter}
+            inputMode={inputMode}
           />
         )}
 

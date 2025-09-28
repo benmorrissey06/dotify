@@ -11,9 +11,10 @@ interface ProcessingState {
 interface ProcessingSectionProps {
   processing: ProcessingState
   onSendToPrinter: (text: string) => void
+  inputMode?: 'camera' | 'manual'
 }
 
-export function ProcessingSection({ processing, onSendToPrinter }: ProcessingSectionProps) {
+export function ProcessingSection({ processing, onSendToPrinter, inputMode = 'camera' }: ProcessingSectionProps) {
   const { isProcessing, progress, result, error } = processing
 
   return (
@@ -24,7 +25,9 @@ export function ProcessingSection({ processing, onSendToPrinter }: ProcessingSec
         <div className="space-y-4">
           <div className="flex items-center space-x-2">
             <Loader2 className="h-4 w-4 animate-spin text-blue-400" />
-            <span className="text-sm text-gray-300">Analyzing with AI...</span>
+            <span className="text-sm text-gray-300">
+              {inputMode === 'camera' ? 'Analyzing with AI...' : 'Preparing text...'}
+            </span>
           </div>
           <div className="w-full bg-gray-700 rounded-full h-2">
             <div 
@@ -53,9 +56,14 @@ export function ProcessingSection({ processing, onSendToPrinter }: ProcessingSec
           <div className="flex items-start space-x-2 p-4 rounded-lg bg-green-900/20 border border-green-700">
             <CheckCircle className="h-5 w-5 text-green-400 mt-0.5 flex-shrink-0" />
             <div className="flex-1">
-              <p className="text-sm font-medium text-green-400">Analysis Complete</p>
+              <p className="text-sm font-medium text-green-400">
+                {inputMode === 'camera' ? 'Analysis Complete' : 'Text Ready'}
+              </p>
               <p className="text-sm text-green-300 mt-1">
-                AI-generated Braille description:
+                {inputMode === 'camera' 
+                  ? 'AI-generated Braille description:' 
+                  : 'Text converted to Braille format:'
+                }
               </p>
             </div>
           </div>
