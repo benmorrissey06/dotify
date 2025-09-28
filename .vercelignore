@@ -1,0 +1,22 @@
+# Backend files - deploy these separately to Railway
+simple_server.py
+requirements.txt
+railway.json
+setup.sh
+setup_local.bat
+deploy_backend.md
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+
+# Development files
+.vscode/
+.idea/
+*.swp
+*.swo
