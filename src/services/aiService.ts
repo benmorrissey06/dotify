@@ -12,8 +12,8 @@ export async function analyzeImage(imageFile: File): Promise<string> {
     reader.readAsDataURL(imageFile)
   })
 
-  // Call our Python server API
-  const response = await fetch('http://localhost:8000/api/analyze', {
+  // Call our Vercel serverless function API
+  const response = await fetch('/api/analyze', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
