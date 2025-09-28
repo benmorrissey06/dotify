@@ -1,0 +1,41 @@
+{
+  "name": "dotify-braille-printer",
+  "version": "1.0.0",
+  "description": "AI-powered Braille label printer that converts images or text into concise descriptions",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "serve": "python simple_server.py"
+  },
+  "keywords": [
+    "braille",
+    "ai",
+    "accessibility",
+    "arduino",
+    "gemini"
+  ],
+  "author": "Dotify",
+  "license": "MIT",
+  "dependencies": {
+    "@google/generative-ai": "^0.2.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "@radix-ui/react-toast": "^1.1.5",
+    "@radix-ui/react-switch": "^1.0.3",
+    "@radix-ui/react-progress": "^1.0.3",
+    "lucide-react": "^0.294.0",
+    "clsx": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.43",
+    "@types/react-dom": "^18.2.17",
+    "@vitejs/plugin-react": "^4.2.1",
+    "autoprefixer": "^10.4.16",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.3.6",
+    "typescript": "^5.2.2",
+    "vite": "^5.0.8"
+  }
+}

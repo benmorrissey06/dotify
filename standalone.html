@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini AI - Standalone</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        input[type="text"], input[type="file"] {
+            width: 70%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Gemini AI - Standalone</h1>
+        
+        <div class="warning">
+            <strong>✅ Ready to use!</strong> This version uses the local Python server for secure API access. 
+            Make sure the Python server is running on localhost:8000.
+        </div>
+        
+        <div class="test-section">
+            <h3>1. Upload Image for Analysis</h3>
+            <p>Upload an image to analyze with Gemini AI:</p>
+            <input type="file" id="imageUpload" accept="image/*" onchange="handleImageUpload()">
+            <button onclick="analyzeImage()" id="analyzeBtn" disabled>Analyze Image</button>
+            <div id="analysisResult" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>2. Test with Sample Image</h3>
+            <p>Test with a built-in sample image:</p>
+            <button onclick="testWithSample()">Test with Sample Image</button>
+            <div id="sampleResult" class="result" style="display: none;"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>3. Environment Info</h3>
+            <p>Current environment details:</p>
+            <button onclick="showEnvironment()">Show Environment</button>
+            <div id="envResult" class="result" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        let API_KEY = '';
+        let uploadedImageBase64 = null;
+        
+        // Use local Python server instead of CORS proxy
+        const LOCAL_API_URL = 'http://localhost:8000/api/analyze';
+        
+        function updateApiKey() {
+            const key = document.getElementById('apiKey').value.trim();
+            if (key) {
+                API_KEY = key;
+                showResult('keyStatus', `API Key updated successfully!`, false);
+            } else {
+                showResult('keyStatus', 'Please enter a valid API key', true);
+            }
+        }
+        
+        function showResult(elementId, content, isError = false) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.textContent = content;
+            element.className = `result ${isError ? 'error' : 'success'}`;
+        }
+        
+        function handleImageUpload() {
+            const fileInput = document.getElementById('imageUpload');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            
+            if (fileInput.files && fileInput.files[0]) {
+                const file = fileInput.files[0];
+                
+                // Check file size (limit to 10MB for CORS proxy)
+                if (file.size > 10 * 1024 * 1024) {
+                    showResult('analysisResult', 'File too large! Please use an image smaller than 10MB.', true);
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const base64 = e.target.result.split(',')[1]; // Remove data:image/...;base64, prefix
+                    uploadedImageBase64 = base64;
+                    analyzeBtn.disabled = false;
+                    showResult('analysisResult', `Image loaded: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`, false);
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        async function analyzeImage() {
+            if (!uploadedImageBase64) {
+                showResult('analysisResult', 'Please upload an image first', true);
+                return;
+            }
+            
+            try {
+                showResult('analysisResult', 'Analyzing image... Please wait...', false);
+                
+                const requestBody = {
+                    image: uploadedImageBase64
+                };
+                
+                const response = await fetch(LOCAL_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.success && data.analysis) {
+                    showResult('analysisResult', `Analysis Result:\n\n${data.analysis}`, false);
+                } else if (data.error) {
+                    showResult('analysisResult', `Error: ${data.error}\n\nDetails: ${data.details || 'No details available'}`, true);
+                } else {
+                    showResult('analysisResult', `Unexpected response format:\n${JSON.stringify(data, null, 2)}`, true);
+                }
+                
+            } catch (error) {
+                showResult('analysisResult', `Error: ${error.message}\n\nMake sure the Python server is running on localhost:8000`, true);
+            }
+        }
+        
+        async function testWithSample() {
+            try {
+                showResult('sampleResult', 'Testing with sample image... Please wait...', false);
+                
+                // Simple 1x1 pixel image in base64
+                const sampleImage = '/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/2wBDAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQH/wAARCAABAAEDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwA/8A8A';
+                
+                const requestBody = {
+                    image: sampleImage
+                };
+                
+                const response = await fetch(LOCAL_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.success && data.analysis) {
+                    showResult('sampleResult', `Sample Image Analysis:\n\n${data.analysis}`, false);
+                } else if (data.error) {
+                    showResult('sampleResult', `Error: ${data.error}\n\nDetails: ${data.details || 'No details available'}`, true);
+                } else {
+                    showResult('sampleResult', `Unexpected response format:\n${JSON.stringify(data, null, 2)}`, true);
+                }
+                
+            } catch (error) {
+                showResult('sampleResult', `Error: ${error.message}\n\nMake sure the Python server is running on localhost:8000`, true);
+            }
+        }
+        
+        function showEnvironment() {
+            const env = {
+                userAgent: navigator.userAgent,
+                location: window.location.href,
+                protocol: window.location.protocol,
+                host: window.location.host,
+                localApiUrl: LOCAL_API_URL,
+                timestamp: new Date().toISOString(),
+                note: 'Using local Python server instead of CORS proxy'
+            };
+            
+            showResult('envResult', JSON.stringify(env, null, 2), false);
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            showResult('keyStatus', 'API key is handled by the Python server. You can start analyzing images!', false);
+        });
+    </script>
+</body>
+</html>
