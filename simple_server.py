@@ -10,19 +10,34 @@ import base64
 import http.server
 import socketserver
 from urllib.parse import urlparse, parse_qs
-import google.generativeai as genai
-from google.generativeai.types import HarmCategory, HarmBlockThreshold
+import sys
+
+# Try to import google.generativeai, handle gracefully if not available
+try:
+    import google.generativeai as genai
+    from google.generativeai.types import HarmCategory, HarmBlockThreshold
+    GEMINI_AVAILABLE = True
+except ImportError:
+    print("⚠️  google-generativeai not installed. Run: pip install google-generativeai")
+    GEMINI_AVAILABLE = False
 
 # Configuration
 PORT = int(os.environ.get('PORT', 8000))
 API_KEY = os.environ.get('GEMINI_API_KEY', 'your-api-key-here')
 
 # Configure Gemini AI
-if API_KEY and API_KEY != 'your-api-key-here':
-    genai.configure(api_key=API_KEY)
-    print(f"🔑 Gemini API Key: Set")
+if GEMINI_AVAILABLE and API_KEY and API_KEY != 'your-api-key-here':
+    try:
+        genai.configure(api_key=API_KEY)
+        print(f"🔑 Gemini API Key: Set")
+    except Exception as e:
+        print(f"❌ Error configuring Gemini: {e}")
+        GEMINI_AVAILABLE = False
 else:
-    print(f"🔑 Gemini API Key: Using default (set GEMINI_API_KEY env var)")
+    if not GEMINI_AVAILABLE:
+        print(f"🔑 Gemini API: Library not available")
+    else:
+        print(f"🔑 Gemini API Key: Using default (set GEMINI_API_KEY env var)")
 
 class GeminiHandler(http.server.BaseHTTPRequestHandler):
     def do_OPTIONS(self):
@@ -48,6 +63,8 @@ class GeminiHandler(http.server.BaseHTTPRequestHandler):
                 "status": "success",
                 "message": "Gemini AI Server is running",
                 "api_key_configured": API_KEY and API_KEY != 'your-api-key-here',
+                "gemini_available": GEMINI_AVAILABLE,
+                "python_version": sys.version,
                 "timestamp": self.date_time_string()
             }
             self.wfile.write(json.dumps(response).encode())
@@ -58,7 +75,11 @@ class GeminiHandler(http.server.BaseHTTPRequestHandler):
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
             
-            response = {"status": "healthy", "service": "gemini-ai-server"}
+            response = {
+                "status": "healthy", 
+                "service": "gemini-ai-server",
+                "gemini_available": GEMINI_AVAILABLE
+            }
             self.wfile.write(json.dumps(response).encode())
             
         else:
@@ -91,6 +112,19 @@ class GeminiHandler(http.server.BaseHTTPRequestHandler):
             self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
             self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
             
+            # Check if Gemini is available
+            if not GEMINI_AVAILABLE:
+                self.send_response(500)
+                self.send_header('Content-type', 'application/json')
+                self.end_headers()
+                
+                response = {
+                    "error": "Gemini library not available",
+                    "message": "Please install google-generativeai: pip install google-generativeai"
+                }
+                self.wfile.write(json.dumps(response).encode())
+                return
+
             # Check API key
             if not API_KEY or API_KEY == 'your-api-key-here':
                 self.send_response(500)
@@ -208,10 +242,13 @@ class GeminiHandler(http.server.BaseHTTPRequestHandler):
 def run_server(port):
     """Start the server"""
     try:
+        print(f"🚀 Starting Python server on http://localhost:{port}")
+        print(f"📱 Open http://localhost:{port} in your browser")
+        print(f"🐍 Python version: {sys.version}")
+        print(f"📦 Gemini available: {GEMINI_AVAILABLE}")
+        print("Press Ctrl+C to stop the server")
+        
         with socketserver.TCPServer(("", port), GeminiHandler) as httpd:
-            print(f"🚀 Starting Python server on http://localhost:{port}")
-            print(f"📱 Open http://localhost:{port} in your browser")
-            print("Press Ctrl+C to stop the server")
             httpd.serve_forever()
     except OSError as e:
         if e.errno == 48:  # Address already in use

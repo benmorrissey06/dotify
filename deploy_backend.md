@@ -39,12 +39,40 @@ Should return:
   "status": "success",
   "message": "Gemini AI Server is running",
   "api_key_configured": true,
+  "gemini_available": true,
+  "python_version": "3.x.x",
   "timestamp": "..."
 }
 ```
 
+## Local Development
+
+### Option 1: Quick Start
+```bash
+# Install dependencies
+pip install google-generativeai
+
+# Set API key
+export GEMINI_API_KEY=your_api_key_here
+
+# Run server
+python simple_server.py
+```
+
+### Option 2: Virtual Environment (Recommended)
+```bash
+# Windows
+setup_local.bat
+
+# Linux/Mac
+chmod +x setup.sh
+./setup.sh
+```
+
 ## Troubleshooting
 
+- **Pip Warnings**: The `--user` flag in Railway config prevents root user warnings
 - **API Key Error**: Make sure `GEMINI_API_KEY` is set in Railway variables
 - **Build Fails**: Check that `requirements.txt` is in your repo
 - **CORS Issues**: The server handles CORS automatically
+- **Gemini Not Available**: Check the `/api/test` endpoint to see if Gemini library loaded
