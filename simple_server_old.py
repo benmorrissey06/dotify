@@ -63,16 +63,8 @@ class GeminiHandler(http.server.SimpleHTTPRequestHandler):
     
     def handle_analyze(self):
         try:
-            # Get API key from environment variable
-            api_key = os.environ.get('GEMINI_API_KEY')
-            
-            if not api_key:
-                error_response = {
-                    "error": "GEMINI_API_KEY environment variable not set",
-                    "message": "Please set your Gemini API key as an environment variable"
-                }
-                self.send_error(500, json.dumps(error_response))
-                return
+            # Get API key from environment variable or use hardcoded one
+            api_key = os.environ.get('GEMINI_API_KEY') or "AIzaSyDflfGxaL6rSYy_cYccLL4NqAf4ymEUU98"
             
             # Read request body
             content_length = int(self.headers['Content-Length'])
