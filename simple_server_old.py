@@ -63,8 +63,10 @@ class GeminiHandler(http.server.SimpleHTTPRequestHandler):
     
     def handle_analyze(self):
         try:
-            # Get API key from environment variable or use hardcoded one
-            api_key = os.environ.get('GEMINI_API_KEY') or "AIzaSyDflfGxaL6rSYy_cYccLL4NqAf4ymEUU98"
+            # Get API key from environment variable or use fallback placeholder
+            # TODO: Replace YOUR_GEMINI_API_KEY_HERE with your actual Gemini API key
+            # You can get your API key from: https://makersuite.google.com/app/apikey
+            api_key = os.environ.get('GEMINI_API_KEY') or "YOUR_GEMINI_API_KEY_HERE"
             
             # Read request body
             content_length = int(self.headers['Content-Length'])

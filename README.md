@@ -1,71 +1,151 @@
-# Dotify Gemini AI API
+# Dotify ⠙⠕⠞⠊⠋⠽ - AI-Powered Braille Label Printer
 
-A standalone Vercel deployment that provides image analysis using Google's Gemini AI Studio API.
+## Inspiration
 
-## Features
+Imagine walking into a grocery store and realizing that nearly every package is silent to your sense of touch. In the United States, unlike public signage covered by the ADA, there is no universal requirement for Braille on food products. Prescription drugs have some best-practice guidelines, but for everyday items like milk, soda, or cereal, Braille is virtually nonexistent.
 
-- **Image Analysis**: Upload images and get detailed AI-powered descriptions
-- **Multiple Test Methods**: Test with sample images or upload your own
-- **Real-time Results**: See API responses and analysis results instantly
-- **CORS Enabled**: Works from any domain
-- **Environment Variable Configuration**: Secure API key management
+As a result, millions of visually impaired Americans rely on workarounds like QR codes, talking label devices, or smartphone apps just to identify something as simple as a can of soup. Labels, the most basic gateway to information, remain out of reach.
 
-## Setup
+Dotify was created to close this gap. It translates the visual world into concise, meaningful messages at the click of a button – and automatically prints out the corresponding Braille.
 
-### 1. Get Gemini API Key
+## What it does
 
-1. Go to [Google AI Studio](https://aistudio.google.com/)
-2. Create a new project or use existing one
-3. Generate an API key
-4. Copy the API key
+Dotify is an AI-powered portable device that captures an image, understands its content, and prints out a short label/sticker that can be read by touch. This is a super easy way to make shops, households, and other places in our community more accessible for the visually impaired.
 
-### 2. Deploy to Vercel
+Capture: The user points the device at an object or scene and takes a picture.
+Understand: The image is processed by our software and analyzed through the Google Gemini API, which generates a concise text description (e.g., "a blue ceramic mug with a flower on it").
+Translate: The Arduino receives this description and converts it into Braille character data.
+Feel: Servo motors actuate pins to emboss the Braille dots, and a DC motor advances the paper for the next character.
 
-1. Fork or clone this repository
-2. Connect to Vercel
-3. Add environment variable:
-   - Name: `GEMINI_API_KEY`
-   - Value: Your Gemini API key from step 1
-4. Deploy
+## How we built it
 
-### 3. Usage
+Dotify combines hardware, software, and AI into a single mechatronic system:
 
-Once deployed, visit your Vercel URL to access the testing interface:
+Power System: 4×AA batteries powering the Arduino, motor driver, and six servos.
+Arduino UNO R4: The "brain" of the device, managing servo motions and motor timing.
+Google Gemini API: Web app takes photo and interprets visual data into descriptive text.
+Micro Servos (x6): Actuate Braille pins to emboss dots.
+DC Motor + Motor Driver: Feeds paper consistently between letters.
+3D-Printed Housing: Keeps all components aligned in a compact, functional case.
 
-- **Test Simple API**: Basic connectivity test
-- **Test Gemini AI Analysis**: Test without image (will show error)
-- **Test with Sample Image**: Uses a built-in sample image
-- **Upload Your Own Image**: Upload any image for analysis
-- **Environment Check**: View current environment details
+## Quick Start Guide
 
-## API Endpoints
+### Prerequisites
+- Node.js and npm
+- Python 3
+- Arduino IDE
+- Google Gemini API key
 
-### `/api/test`
-- **Method**: GET/POST
-- **Purpose**: Basic connectivity test
-- **Response**: Request details and timestamp
+### 1. Get Your API Key
+1. Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Create a new project
+3. Generate your API key
+4. Copy the key for the next step
 
-### `/api/analyze`
-- **Method**: POST
-- **Purpose**: Image analysis using Gemini AI
-- **Body**: `{ "image": "base64_image_data" }`
-- **Response**: AI analysis results
+### 2. Configure API Key
+Replace the placeholder in `run_python_server.bat`:
+```batch
+set GEMINI_API_KEY=your_actual_api_key_here
+```
 
-## Environment Variables
-
-- `GEMINI_API_KEY`: Your Google Gemini API key (required)
-
-## Dependencies
-
-- `@google/generative-ai`: Google's official Gemini AI SDK
-
-## Development
-
+### 3. Install Dependencies
 ```bash
 npm install
-vercel dev
 ```
+
+### 4. Start the Development Servers
+
+**Frontend (React app):**
+```bash
+npm run dev
+```
+Access at: `http://localhost:5173`
+
+**Backend (Python AI server):**
+```bash
+npm run serve
+# OR manually:
+python simple_server.py
+```
+Access at: `http://localhost:8000`
+
+### 5. Setup Arduino Hardware
+1. Upload `arduino/dotify_braille.ino` to your Arduino Uno R4
+2. Connect Arduino to computer via USB
+3. In the web app, navigate to "Serial Connection"
+4. Select your Arduino's COM port
+5. Click "Connect"
+
+## Usage
+
+1. **Take Photo**: Use the camera interface or upload an image
+2. **AI Analysis**: The system analyzes the image and generates a concise description
+3. **Review Description**: Ensure the description is clear and under 4 words for optimal Braille printing
+4. **Print Label**: Send the description to the Arduino for Braille embossing
+5. **Apply Label**: The resulting Braille label can be applied to products or objects
+
+## Hardware Requirements
+
+- **Arduino Uno R4**: Main controller
+- **6x Micro Servos**: Braille pin actuation
+- **DC Motor + Driver**: Paper feed mechanism
+- **Braille Paper**: Standard Braille paper or label stock
+- **3D-Printed Housing**: Component enclosure
+- **4x AA Batteries**: Power supply
+- **USB Cable**: Communication with computer
+
+## Software Components
+
+- **Frontend**: React + TypeScript + Tailwind CSS
+- **Backend**: Python + Google Gemini AI
+- **Arduino**: C++ for servo and motor control
+- **Communication**: Web Serial API for browser-to-Arduino communication
+
+## Challenges we ran into
+
+Mechanical precision: Aligning servo motors to press Braille pins accurately required several 3D-printed iterations.
+Motor control: Without PWM on the motor driver pin, we had to use fixed-duration timing for consistent paper spacing.
+System integration: Coordinating the website, AI API, and Arduino required a robust communication protocol to avoid data corruption or delays.
+
+## Accomplishments that we're proud of
+
+Built a functional Braille label printer using low-cost, off-the-shelf parts.
+Created a full end-to-end pipeline, from image recognition → AI description → Braille translation → physical embossing.
+Demonstrated the potential of AI and hardware to deliver accessible, real-world assistive technology.
+
+## What we learned
+
+How to design and prototype a complex mechatronic device.
+Hands-on experience with software-hardware communication and servo control.
+How having a clear mission for the product is just as important as planning out technical details. The fact that we were solving real human problems definitely fueled us throughout the Hackathon.
+
+## What's next for Dotify
+
+Miniaturization & portability: Shrink the prototype into a pocket-friendly form factor.
+Multi-cell Braille display: Expand to a 10–12 cell line for faster reading of full words.
+On-device AI: Use tinyML models to perform object recognition without internet.
+Community feedback: Partner with visually impaired users to improve usability and design.
+
+## Impact
+
+Dotify demonstrates how AI and hardware can work together to deliver accessible, real-world assistive technology. By providing an easy way to create Braille labels for everyday items, we're helping to make the world more inclusive for visually impaired individuals.
+
+## Built With
+
+arduino
+c++
+cad
+css
+gemini
+html
+javascript
+python
+servo
 
 ## License
 
 MIT
+
+---
+
+*Built with accessibility in mind - making the visual world accessible through touch.*
