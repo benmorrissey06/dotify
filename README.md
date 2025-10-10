@@ -102,10 +102,4 @@ Access at: `http://localhost:8000`
 - **Communication**: Web Serial API for browser-to-Arduino communication
 
 
-## License
 
-MIT
-
----
-
-*Built with accessibility in mind - making the visual world accessible through touch.*
